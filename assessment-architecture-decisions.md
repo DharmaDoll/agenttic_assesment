@@ -1,6 +1,6 @@
 # AIエージェント構成の判断記録
 
-この文書は[導入提案](agentic-security-plan.md)のABCD案について、agentの使い方と、なぜ選択・採用・保留したかを残す正本である。実装順序は[A案の実行計画](strix-continuous-assessment-plan.md)を参照する。
+この文書は[導入提案](agentic-security-plan.md)のABCD案について、agentの使い方と、なぜ選択・採用・保留したかを残す正本である。各案の実装順序は[A案の実行計画](strix-continuous-assessment-plan.md)、[B案の実行計画](cairn-continuous-assessment-plan.md)、[C案の実行計画](hermes-continuous-assessment-plan.md)、[D案の実行計画](artex-continuous-assessment-plan.md)を参照する。
 
 ## 判断の前提
 
