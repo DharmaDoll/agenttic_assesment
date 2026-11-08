@@ -2,7 +2,7 @@
 
 作成日：2026-11-07。状態：計画案。実装・診断・日次運用はすべて未着手。
 
-本書は[導入提案](agentic-security-plan.md)のB案を具体化する下位計画であり、[A案の実行計画](strix-continuous-assessment-plan.md)と同じ段階・粒度で記述する。目的、対象範囲、開始権限、日次頻度、採用基準は導入提案を正とする。ABCDの選択理由は[構成判断記録](assessment-architecture-decisions.md)へ残す。本書の作成はBの採用決定やAからの切替を意味しない。成果物名・インターフェース・工数は実装案であり、利用可能な機能・コマンドの保証ではない。
+本書は[導入提案](../agentic-security-plan.md)のB案を具体化する下位計画である。[A案](../strix/plan.md)は短い試行の計画と[実行設計](../strix/spec.md)を分けて管理する。本書はBの候補計画として保持する。目的、対象範囲、開始権限、日次頻度、採用基準は導入提案を正とする。ABCDの選択理由は[構成判断記録](../assessment-architecture-decisions.md)へ残す。本書の作成はBの採用決定やAからの切替を意味しない。成果物名・インターフェース・工数は実装案であり、利用可能な機能・コマンドの保証ではない。
 
 ## 1. 目的と到達点
 
@@ -95,7 +95,7 @@ flowchart TD
 | Cairn | 許可範囲での仮説生成、探索先の選択、観測による計画変更 | 開始条件と達成条件、入力資料、人によるHintの記録 |
 | runner・結果変換 | 起動、排他、期限、状態照合、原証拠を参照する共通記録 | projectとrunの対応、状態変換規則。対象・予算をagentに変更させない |
 
-最小PoCはCairnが必要とする構成、専用環境、ファイル保存とする。独自DB・UI・統括agentは追加しない。Serverの必要な永続状態は保持する。Python・依存・backend CLI・Cairn完全SHA・使用する全image digest・モデルIDはP1で固定する。対象技術は[105項目の台帳](TARGET_TECH_STACK.md)と対応付け、全項目へ一度に対象を広げない。
+最小PoCはCairnが必要とする構成、専用環境、ファイル保存とする。独自DB・UI・統括agentは追加しない。Serverの必要な永続状態は保持する。Python・依存・backend CLI・Cairn完全SHA・使用する全image digest・モデルIDはP1で固定する。対象技術は[105項目の台帳](../../TARGET_TECH_STACK.md)と対応付け、全項目へ一度に対象を広げない。
 
 ## 3. PoC後の拡張時に決める事項
 

@@ -2,7 +2,7 @@
 
 作成日：2026-11-07。状態：計画案。ビルド・実装・診断・日次運用はすべて未着手。
 
-本書は[導入提案](agentic-security-plan.md)のD案を、[A案](strix-continuous-assessment-plan.md)・[B案](cairn-continuous-assessment-plan.md)・[C案](hermes-continuous-assessment-plan.md)と同じ段階・粒度で具体化する。目的、対象、開始権限、日次頻度、採用基準は導入提案を正とする。ABCDの選択理由は[構成判断記録](assessment-architecture-decisions.md)へ記録する。成果物名・操作・工数は実装案であり、機能の動作保証ではない。
+本書は[導入提案](../agentic-security-plan.md)のD案を具体化する候補計画である。[A案](../strix/plan.md)は短い試行の計画と[実行設計](../strix/spec.md)を分けて管理し、[B案](../cairn/plan.md)・[C案](../hermes/plan.md)と本書は比較候補として保持する。目的、対象、開始権限、日次頻度、採用基準は導入提案を正とする。ABCDの選択理由は[構成判断記録](../assessment-architecture-decisions.md)へ記録する。成果物名・操作・工数は実装案であり、機能の動作保証ではない。
 
 ## 1. 目的と到達点
 
@@ -96,7 +96,7 @@ flowchart TD
 | ARTEX | 許可範囲内の仮説・探索・証拠記録 | 全内部agentに適用する開始条件と上限 |
 | 外部制御・結果取得 | 契約検証、排他、期限、資源回収、共通記録 | UI表示と独立した停止・観測経路 |
 
-必要なARTEX・DB・専用環境とnative保存から開始する。独自ダッシュボードや証拠DBは追加しない。採用fork完全SHA、Go・Node等の実際のbuild tool、依存、base・DB image digest、ローカルbuild image ID、モデル・Skill版を固定する。[105項目の台帳](TARGET_TECH_STACK.md)と実採用を対応付け、対象を一度に広げない。
+必要なARTEX・DB・専用環境とnative保存から開始する。独自ダッシュボードや証拠DBは追加しない。採用fork完全SHA、Go・Node等の実際のbuild tool、依存、base・DB image digest、ローカルbuild image ID、モデル・Skill版を固定する。[105項目の台帳](../../TARGET_TECH_STACK.md)と実採用を対応付け、対象を一度に広げない。
 
 ## 3. PoC後の拡張時に決める事項
 
