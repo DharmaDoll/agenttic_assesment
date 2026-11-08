@@ -41,7 +41,7 @@ GambitはStrixによる探索、Cairnによる連鎖的な検証、Hermesによ�
 
 技術的な説明は各プロジェクトの公開資料による。性能や誤検知ゼロを本PJで確認したものではない。[Strix](https://github.com/usestrix/strix)、[Cairn](https://github.com/oritera/Cairn)、[Hermes](https://github.com/NousResearch/hermes-agent)、[ARTEXの公開状況に関するGTIG報告](https://cloud.google.com/blog/topics/threat-intelligence/artex-and-friends-enter-agentic-offensive-frameworks)
 
-推奨はStrixを最初の実行候補にし、Cairnの追加検出を測る構成。Hermesによる統括とARTEXの実行評価は、基本の評価基盤を整えてから判断する。すべてのツールでコード、コンテナdigest、モデルID、プロンプト、設定を固定・記録し、更新時に評価をやり直す。報告中の改変版と現在の公開版の挙動は同一と仮定しない。
+推奨はStrixを最初の実行候補にし、Cairnの追加検出を測る構成。Hermesによる統括とARTEXの診断評価は、基本の評価基盤を整えてから判断する。追加方針によりARTEXのモデルなしWebUIを先行実装し、2026-11-08に初期設定・ログイン・停止再開を確認した。詳細は[構成判断記録](assessment-architecture-decisions.md#adr-004現在のwsl2でモデルなしのwebuiを先に動かす)。すべてのツールでコード、コンテナdigest、モデルID、プロンプト、設定を固定・記録し、更新時に評価をやり直す。報告中の改変版と現在の公開版の挙動は同一と仮定しない。
 
 ### 構成候補A〜Dと採用判断
 
@@ -78,7 +78,7 @@ BではCairnの出力を小さく変換して、findingと元の証拠への参�
 
 BaaRaiを先に確認する理由は依存先の明示的な置換とローカルビルド経路であり、保守品質やビルド成功を確認したためではない。他forkのupstream参照だけを理由にビルド不能とは判断しない。
 
-D0でfork・完全SHA・依存関係を固定し、D1でビルド・DB・UI起動、D2で共通の評価対象への診断、D3で停止・対象範囲・並列数・期限、D4でAとの工数・証拠・費用・再現性比較を行う。D0〜D4はすべて未着手。初回のA互換性調査とD1調査は各半日を目安とし、大幅なエンジン改修やSDK復旧が必要なら理由を記録して構成を再検討する。
+D0でfork・完全SHA・依存関係を固定し、D1でビルド・DB・UI起動、D2で共通の評価対象への診断、D3で停止・対象範囲・並列数・期限、D4でAとの工数・証拠・費用・再現性比較を行う。2026-11-08にD0の版記録とD1のモデルなしWebUIを先行確認した。診断・探索中の制御・比較評価は未着手。初回のA互換性調査とD1調査は各半日を目安とし、大幅なエンジン改修やSDK復旧が必要なら理由を記録して構成を再検討する。
 
 ### 判断記録
 

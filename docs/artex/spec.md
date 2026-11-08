@@ -1,6 +1,8 @@
 # D案：ARTEX WebUIをまず試すための実行設計
 
-更新日：2026-11-08。公開資料を確認した設計案。ビルド・画面操作・診断はNOT RUN。
+更新日：2026-11-08。モデルなしWebUIの初期設定・ログイン・停止再開はPASS。モデル接続・診断はNOT RUN。
+
+今回の実装範囲はユーザー回答により「現在のWSL2環境で、モデルなしのWebUIまで」。診断条件は次回決める。後述の第3〜6節は診断へ進む際の計画として保持する。
 
 [計画](plan.md)は目的と後段の候補、本書は初回の構成・導入・UI操作・結果確認を管理する。最初は「UIが開く」「モデルとtoolが動く」「Juice Shopを1回探索できる」の順に試す。A案の完成を待たずDを試行してよい。一般的なLinux VM・Docker Compose・モデルAPIが使える前提で、実IP、資格情報、費用枠は開始時に記入する。
 
@@ -8,10 +10,10 @@
 
 | 項目 | 選定と理由 |
 |---|---|
-| fork | BaaRai/ARTEX。公開Composeによるローカルbuildを初回経路とする。他fork比較はしない |
-| 実行 | 専用Linux VM上でComposeのARTEX＋PostgreSQL。初回は追加runner・定期実行・独自UIなし |
+| fork | BaaRai/ARTEX、完全SHA `a908e1ec170f973734b3258dd37d667d2562440a`。取得archiveもSHA-256照合する |
+| 実行 | 今回のUI試行は既存WSL2上のComposeでARTEX＋PostgreSQL＋入口Nginx。診断段階の専用環境・通信境界は別途確認 |
 | 管理画面 | VMのloopback:8787。リモート利用はSSH転送。proxy:8788とDBも一般公開しない |
-| モデル | Anthropic直接接続、`claude-opus-5-5`を最初の接続候補。ARTEXでの実互換性は短いtool試験で確認 |
+| モデル | 今回は未接続・資格情報なし。診断段階ではAnthropic接続を候補にし、利用可能な正確なモデルIDとARTEX互換性を確認する |
 | 内部agent | 同梱の役割・プロンプト・Skillで開始。System Settingsのworker並列数は初期案1。planner等を含む全体の費用は別集計 |
 | 対象 | 自前のJuice Shopを別の隔離環境に置く。構築・初期化・正解分離は[A案のラボ定義](../strix/spec.md#7-やられサイトの定義と評価)を共通利用 |
 | 追加連携 | 初回は外部MCP、ブラウザ拡張、資産同期、外部Skill一括導入を追加しない |
@@ -36,46 +38,75 @@ Retestは初回起動条件ではない。公開資料上、再検証履歴は�
 
 ## 2. 最初のチェックポイント：画面を開く
 
-目安は準備済み環境で30〜60分から着手。buildの依存取得時間は未測定であり、時間保証ではない。最初はモデルキーなしでUIまで到達する。mock/demo画面は接続確認の代わりにしない。
+実装は [Compose](../../src/artex/compose.yaml)、[操作スクリプト](../../src/artex/artex.sh)、[ソース固定値](../../src/artex/source.lock)。取得ソース・秘密値・データは `.gitignore` 対象の `var/artex/` に置く。外部ディレクトリを手で管理する当初案を、リポジトリから再実行できる配置へ変更した。upstreamのソースはGitへ追加しない。
 
-作業場所はこの計画リポジトリ外の専用ディレクトリ。次はその場所で実行する手順例で、今回は未実行。
-
-```sh
-git clone https://github.com/BaaRai/ARTEX.git artex-poc
-cd artex-poc
-git rev-parse HEAD
-```
-
-表示された完全SHAを記録し、そのcheckoutを試行中は更新しない。以下の`ARTEX_REV`へ同じ値を設定してdetached checkoutにする。
+リポジトリルートで次を実行する。前提コマンドは [README](../../README.md#d案のwebuiを起動する)を参照。
 
 ```sh
-git checkout --detach "$ARTEX_REV"
-umask 077
-cp .env.example .env
-chmod 600 .env
+make setup
+make build
+make up
+make init
+make test
+make status
 ```
 
-`.env`をローカルで編集し、`POSTGRES_PASSWORD`をこのラボ用のランダムな値へ変更する。DSN組立時の文字エスケープ問題を避けるため初回は十分な長さのランダムな英数字を用いる。`ARTEX_BIND_ADDR=127.0.0.1`を維持し、モデルキーはまだ空欄。秘密値を含む`.env`、展開済みCompose設定、setup tokenを共有ログやGitへ貼らない。
+`setup` はソースarchiveのSHA-256を照合して展開し、OpenSSLの乱数から32 byteのDBパスワードを生成する。`var/artex/runtime.env` は0600、親ディレクトリは0700。同じSHAでの再実行は既存ソースと資格情報を上書きしない。不一致のソースは停止して報告する。モデルキーを読み込む処理はない。
 
-```sh
-docker compose -p artex-poc config --quiet
-docker compose -p artex-poc up -d --build
-docker compose -p artex-poc ps
-```
+Composeのproject名は `agenttic-artex-ui`。ARTEXはホストのUID/GIDで動作し、capability全削除、権限昇格禁止、root filesystemはread-only。dataとkeysだけを永続書込先にし、同梱skillsはread-onlyで参照する。DBは専用volume。ARTEX・DBは `internal: true` の専用networkだけに置き、通信記録proxy:8788とDBをhostへ公開しない。全サービスの自動再起動は無効。既存のDependency-Trackサービスとは別project・networkを使う。
 
-公開Composeは手元のソースからimageをbuildする。Dockerfileはfrontend・Go・実行用toolを含むので、依存downloadを探索実行前の準備時間として記録する。固定checkoutでもbase tagや一部toolに可変依存があるため、生成image ID・DB image digest・buildログを残し、同じ試行条件では既存imageを再利用する。完全再現buildを初回条件にはしない。[Dockerfile](https://github.com/BaaRai/ARTEX/blob/main/Dockerfile)
+このDocker 26環境ではinternal networkだけのARTEXに指定したportsが実際には公開されず、ホストから接続できなかった。そのため、入口用Nginxを通常のentry networkとinternal networkへ接続し、Nginxの8080だけを `127.0.0.1:8787` へ公開する。Nginxの転送先はARTEXに固定し、モデルキー・DB資格情報を渡さない。ARTEXへ通常networkを追加する方式は使わない。設定は[nginx.conf](../../src/artex/nginx.conf)。SSE向けbuffering無効化とWebSocketヘッダーは[公式proxy仕様](https://nginx.org/en/docs/http/ngx_http_proxy_module.html)・[WebSocket仕様](https://nginx.org/en/docs/http/websocket.html)に従う。Nginx自身にはentry networkの経路があり、この構成を診断時の完全な対象制限とはみなさない。
 
-同じhostなら`http://127.0.0.1:8787`を開く。リモートVMなら利用者端末から次の転送を使う。`ARTEX_HOST`は自分のSSH接続先。
+ビルド時には依存取得のため外部接続を使う。upstream Dockerfileはfrontend・Go・探索toolを含み、base tagや一部toolの`latest`が可変のため、固定SHAだけで完全再現buildを保証しない。生成image ID・DB digestとビルドログを記録し、`make up` は再ビルドせず同じimageを使う。[固定版Dockerfile](https://github.com/BaaRai/ARTEX/blob/a908e1ec170f973734b3258dd37d667d2562440a/Dockerfile)
+
+このWSL2環境ではDocker bridge経由のGo依存取得がconnection resetで失敗した。約42MBのsqlite依存をcurlで比較すると、bridgeは45秒で約7.9MBまで受信してtimeout、ホストとhost networkの一時コンテナは全43,818,878 byteの取得に成功した。HTTP/2無効化では解消しなかった。対処は `ARTEX_BUILD_NETWORK=host make build` とし、ソースやTLS検証を変更せずビルド通信だけを切り替える。runtimeへのhost network適用はしない。
+
+`make init` は実Chromiumで初期設定フォームへ一回限りのtokenと生成した管理者パスワードを入力する。tokenやパスワードは標準出力へ出さない。既に初期化済みなら上書きせず、保存済みパスワードでログイン確認する。ユーザー名は `ARTEX`、パスワードは `var/artex/admin-password`（0600）を操作者の端末で確認する。手で変更した場合は同ファイルも安全に更新してから `make test` を実行する。
+
+`make test` は新しいブラウザでのログイン、Tasks画面の描画、認証付きAPI、未認証アクセス拒否、モデル未接続・task 0件・使用SHAを検証する。結果とスクリーンショットは `var/artex/evidence/` に保存する。診断taskは作らない。
+
+同じhostなら `http://127.0.0.1:8787` を開く。WSLのlocalhost転送が利用できればWindowsからも `http://localhost:8787` を使えるが、Windows側の到達は別途確認する。リモート利用はSSH転送を使い、hostの公開bindへ変更しない。backendログには初回tokenが含まれ得るため、未加工ログを共有しない。
 
 ```sh
 ssh -N -L 18787:127.0.0.1:8787 "$ARTEX_HOST"
 ```
 
-端末の`http://127.0.0.1:18787`へアクセスする。初期画面の`/setup`で管理者設定を行う。初回tokenは操作者がVM内のbackendログから確認し、手元だけで扱う。ログを診断成果物として共有する場合はtoken等を伏字にする。初回設定後のログインを確認して「UI到達PASS」と記録する。
+停止は `make stop`、再開は `make up`。DB・data・keysを削除せず、再開後の `make test` で管理者設定とログインの保持を確認する。
 
-ここで止めても有効な最初の成果。DB不健康ならDB設定、UIが出なければbuild／待受を確認し、モデル設定を同時に変えない。復旧調査が半日を超える場合は最初の失敗箇所を記録して次の小作業を選ぶ。
+### 今回の実測：D-UI-20261108
+
+対象はローカル管理画面のみ。モデルなし、診断task 0件。以下は2026-11-08 09:10 UTC時点の確認であり、攻撃・探索・検出品質の評価は含まない。
+
+| 項目 | 実際の版・状態 |
+|---|---|
+| host | WSL2、Linux 5.15.167.4、Docker 26.1.4、Compose 2.27.1 |
+| ARTEX | source `a908e1ec170f973734b3258dd37d667d2562440a`、image ID `sha256:69280dec14799c7b2bd3d8dc0d1c3a73fce13d84779e7f272be0b253e76e96eb` |
+| PostgreSQL | 16.15、`postgres:16-alpine`。Composeに取得したmanifest digestを固定 |
+| Nginx | 1.28.3、`nginx:1.28-alpine`。Composeに取得したmanifest digestを固定 |
+| upstream構成 | `go.mod`のGo指定1.26.10、Web package 2.2.0、ビルド時Next.js 16.2.9、runtime Node 22.23.4・Python 3.12.16 |
+| 確認ツール | ホストNode 18.12.1、Chromium 138.0.7204.157。npm依存追加なし |
+| 採用技術の対応 | [対象技術台帳](../../TARGET_TECH_STACK.md)のDocker・PostgreSQL・Makefileを実行環境に使用。Nginxは今回追加した入口用の補助サービス |
+
+| 確認 | 結果・証拠 |
+|---|---|
+| ソース取得・設定 | archive SHA-256照合、`make setup`再実行でruntime.env不変、秘密ファイル0600：PASS |
+| ビルド | host networkで初回image完成：約11分37秒。ファイル権限修正後の再ビルド：約3分7秒。承認待ち・中断時間は含めない |
+| 起動 | `make up`でWeb入口・ARTEX・DBの3サービスがhealthy：PASS |
+| 初期管理者 | 実ブラウザの初期設定操作、`POST /api/auth/init` 200、以後同じパスワードでログイン：PASS |
+| UI・API | 新規Chromiumセッションのログイン、Current tasks画面、未認証API 401、認証付きAPI成功：PASS |
+| 公開範囲・権限 | `make test`でloopback公開、DB・通信記録proxy非公開、ARTEX非root・read-only・capability削除・internal networkをDocker実状態から確認：PASS |
+| モデル・task | APIで`configured=false`、`key_set=false`、task 0件、versionが固定SHAと一致：PASS |
+| 停止・保持 | `make stop`後に全3コンテナexited/exit 0。`make up`→`make test`成功、JWT署名鍵のfingerprint不変：PASS |
+| Windows側の表示 | WSL側Chromiumでは確認済み。利用者のWindowsブラウザからの到達はNOT RUN |
+| 診断 | モデル、Juice Shop、tool往復、対象外遮断、探索中の停止、finding再現はいずれもNOT RUN |
+
+ローカル証拠は `var/artex/evidence/` の `build-host-network.log`、`build-permissions.log`、`ui-check-before-restart.json`、`ui-check.json`、`tasks.png`。rawログ・DB・鍵・パスワードはGit対象外に保持する。
+
+初回導入で直した点：取得スクリプトの`umask 077`がupstreamファイルの読取・実行権限まで狭め、非root起動で`/app/start.sh: Permission denied`となった。検証済みarchiveを`tar --same-permissions`で展開し、親保存先と秘密値の権限は0700／0600を維持した。Nginxの既定一時ディレクトリもread-only root上への作成で失敗したため、全一時ディレクトリをtmpfsへ指定した。ブラウザ確認はupstreamの末尾スラッシュ付きURLと実見出しに合わせて修正済み。
 
 ## 3. 次のチェックポイント：モデルとtool
+
+以下は今回の実装範囲外。UI用Composeにはモデル用の外部通信経路も資格情報設定もないため、対象・予算・実行境界を確定してから診断用構成を追加する。
 
 UIのLLM ConfigurationでAnthropicの接続設定と`claude-opus-5-5`を入力し、active設定とagent別の上書きを確認する。正確な入力欄、認証情報の保存先・exportへの混入有無は固定版で確認する。キーはUIへ直接入力し、手順書には値を残さない。
 
@@ -92,10 +123,10 @@ UI閲覧だけの段階で全検査基盤を作らない。対象にアクセス
 正常終了・手動停止・期限時は対象通信を閉じる。UIの停止操作を試し、実際に通信が止まるか観測する。停止ボタンの存在・位置・意味は未確認なので、以下を独立した停止手段として準備する。
 
 ```sh
-docker compose -p artex-poc stop -t 10 artex
+make stop
 ```
 
-これは同じ専用checkoutで実行しARTEXコンテナ全体を停止する。host障害や残存通信時は外側で通信遮断して専用VMを停止する。停止猶予後に対象通信がないことを確認する。自動再起動設定があるためprocessをkillするだけでは停止扱いにしない。DB・data・keys・skillsを保持し、初回停止に`down -v`やDB全消去は使わない。
+これはリポジトリルートで実行し、Web入口・ARTEXコンテナ全体・DBを停止する。host障害や残存通信時は外側で通信遮断して実行環境を停止する。停止猶予後に対象通信がないことを確認する。現在のComposeは自動再起動を無効化しているが、診断用構成でもprocessのkillだけを停止扱いにしない。DB・data・keys・skillsを保持し、初回停止に`down -v`やDB全消去は使わない。
 
 ## 5. Juice Shopを1 taskだけ探索する
 
@@ -131,7 +162,7 @@ Tasksで新規タスクを作り、次の本文を入力する。実際のUIフ�
 | 停止 | 手動・期限・正常終了で対象通信停止。UI表示だけで判定しない |
 | 独立再現 | 人が前提を再作成して候補を確認。未判定・再現不能・誤検知を分ける |
 
-全項目は現在NOT RUN。run ID、task ID、UTC開始終了、使用版、モデル、時間・費用（確定／推計／不明）、人の介入、候補・確認済み件数、未確認範囲、停止証拠を保存する。共通の実行状態と診断状態は[計画第5節](plan.md#5-自動化へ進む場合の起動制御と保存データ案)に合わせる。
+UI到達と無診断状態での停止再開は第2節の実測どおりPASS。モデル接続以降はNOT RUN。診断へ進んだらrun ID、task ID、UTC開始終了、使用版、モデル、時間・費用（確定／推計／不明）、人の介入、候補・確認済み件数、未確認範囲、停止証拠を保存する。共通の実行状態と診断状態は[計画第5節](plan.md#5-自動化へ進む場合の起動制御と保存データ案)に合わせる。
 
 初回は大規模なbackup復元試験を待たず、nativeデータを保持し原証拠を取り出せるかを確認する。UI/APIで取れない項目は勝手に取得済みとせず、次の改善候補にする。raw結果と認証情報はGit外、共有要約は伏字。確認済みfindingが出た場合にだけRetestを試し、agentによる再検証と人の判定を別に残す。
 

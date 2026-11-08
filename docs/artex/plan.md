@@ -1,6 +1,6 @@
 # D案：ARTEXによる継続的な脆弱性検知の実行計画
 
-作成日：2026-11-07。更新日：2026-11-08。状態：初回UI試行を具体化。ビルド・実装・診断・日次運用はすべて未着手。
+作成日：2026-11-07。更新日：2026-11-08。状態：モデルなしWebUIの初期設定・ログイン・停止再開を確認済み。今回の範囲はユーザー指定によりUIまで。診断・日次運用は未着手。
 
 本書は[導入提案](../agentic-security-plan.md)のD案を具体化する候補計画である。[A案](../strix/plan.md)は短い試行の計画と[実行設計](../strix/spec.md)を分けて管理し、[B案](../cairn/plan.md)・[C案](../hermes/plan.md)と本書は比較候補として保持する。目的、対象、開始権限、日次頻度、採用基準は導入提案を正とする。ABCDの選択理由は[構成判断記録](../assessment-architecture-decisions.md)へ記録する。成果物名・操作・工数は実装案であり、機能の動作保証ではない。
 
@@ -34,7 +34,7 @@
 
 ### 最初に実行する作業：P0〜P4
 
-他文書からはD-P0等と識別する。全項目未着手。専用host・モデルアクセス・合成fixtureが利用可能なら初回結果まで半日〜1日を目標にする。ただしビルド可否は未確認で、P1で半日を超える復旧が必要ならいったん調査結果を残して構成判断へ戻る。
+他文書からはD-P0等と識別する。P1のUI部分は先行実装・確認済み。モデル・診断条件は未確定でP1全体の完了ではない。実測は[実行設計](spec.md#今回の実測d-ui-20261108)へ記録する。専用host・モデルアクセス・合成fixtureが利用可能なら初回診断結果まで半日〜1日を目標にする。P1で半日を超える復旧が必要ならいったん調査結果を残して構成判断へ戻る。
 
 | ID | 作業 | 成果物・完了条件 | 目安 |
 |---|---|---|---|
@@ -69,7 +69,7 @@ P0→P1→P2→P3→P4の順に進める。初回の結果転記は手動でよ�
 
 ## 2. 構成と責任分担
 
-2026-11-07確認のBaaRai/ARTEX READMEは、統合UI、task・finding・通信記録、PostgreSQLを使う構成を説明している。本PJの起動・検出性能は未検証である。[BaaRai/ARTEX README](https://github.com/BaaRai/ARTEX)
+2026-11-07確認のBaaRai/ARTEX READMEは、統合UI、task・finding・通信記録、PostgreSQLを使う構成を説明している。2026-11-08に本PJでモデルなしWebUI起動・ログインを確認した。検出性能は未検証である。[BaaRai/ARTEX README](https://github.com/BaaRai/ARTEX)
 
 公開ComposeにはARTEXのローカルビルド、PostgreSQL、永続volumeとdata・keys・skillsのマウント、再起動設定がある。管理UIの初期bindはloopbackだが、固定版の実効設定をP1で確認する。[Compose](https://github.com/BaaRai/ARTEX/blob/main/docker-compose.yml)
 
