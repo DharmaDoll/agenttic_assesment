@@ -40,16 +40,20 @@ Retestは初回起動条件ではない。公開資料上、再検証履歴は�
 
 実装は [Compose](../../src/artex/compose.yaml)、[操作スクリプト](../../src/artex/artex.sh)、[ソース固定値](../../src/artex/source.lock)。取得ソース・秘密値・データは `.gitignore` 対象の `var/artex/` に置く。外部ディレクトリを手で管理する当初案を、リポジトリから再実行できる配置へ変更した。upstreamのソースはGitへ追加しない。
 
-リポジトリルートで次を実行する。前提コマンドは [README](../../README.md#d案のwebuiを起動する)を参照。
+Linux／WSL2でDocker Engine＋Compose v2、Bash、curl、tar、sha256sum、OpenSSL、makeを使う。初期設定と統合テストにはNode.js 18以上、Chromium、jqが必要。リポジトリルートで次を実行する。
 
 ```sh
-make setup
-make build
-make up
-make init
-make test
-make status
+make setup   # 固定ソースを取得・照合し、ローカルDBパスワードを生成
+make build   # upstream Dockerfileからビルド。依存取得にネット接続が必要
+make up      # Web入口・ARTEX・DBを起動し、healthcheckを待つ
+make init    # 初回管理者設定と実ブラウザでのログイン確認
+make test    # 新しいブラウザでのログイン、API、モデル未接続を確認
+make status  # 稼働状態を確認
+make lint    # Bash・Node構文とdiffの空白を確認
+make stop    # 全サービスを停止。データ・鍵・DB volumeは保持
 ```
+
+`make test` は起動済みサービスに対する統合確認で、モックや診断taskの作成は含まない。停止後は `make up` で再開し、`make test` で保持を確認できる。
 
 `setup` はソースarchiveのSHA-256を照合して展開し、OpenSSLの乱数から32 byteのDBパスワードを生成する。`var/artex/runtime.env` は0600、親ディレクトリは0700。同じSHAでの再実行は既存ソースと資格情報を上書きしない。不一致のソースは停止して報告する。モデルキーを読み込む処理はない。
 
@@ -61,7 +65,7 @@ Composeのproject名は `agenttic-artex-ui`。ARTEXはホストのUID/GIDで動�
 
 このWSL2環境ではDocker bridge経由のGo依存取得がconnection resetで失敗した。約42MBのsqlite依存をcurlで比較すると、bridgeは45秒で約7.9MBまで受信してtimeout、ホストとhost networkの一時コンテナは全43,818,878 byteの取得に成功した。HTTP/2無効化では解消しなかった。対処は `ARTEX_BUILD_NETWORK=host make build` とし、ソースやTLS検証を変更せずビルド通信だけを切り替える。runtimeへのhost network適用はしない。
 
-`make init` は実Chromiumで初期設定フォームへ一回限りのtokenと生成した管理者パスワードを入力する。tokenやパスワードは標準出力へ出さない。既に初期化済みなら上書きせず、保存済みパスワードでログイン確認する。ユーザー名は `ARTEX`、パスワードは `var/artex/admin-password`（0600）を操作者の端末で確認する。手で変更した場合は同ファイルも安全に更新してから `make test` を実行する。
+`make init` は実Chromiumで初期設定フォームへ一回限りのtokenと生成した管理者パスワードを入力する。tokenやパスワードは標準出力へ出さない。既に初期化済みなら上書きせず、保存済みパスワードでログイン確認する。ユーザー名は `ARTEX`。パスワードは操作者の端末で `cat var/artex/admin-password` を実行して確認する。ファイルは0600で保存し、値をGitやチャットへ貼らない。手で変更した場合は同ファイルも安全に更新してから `make test` を実行する。
 
 `make test` は新しいブラウザでのログイン、Tasks画面の描画、認証付きAPI、未認証アクセス拒否、モデル未接続・task 0件・使用SHAを検証する。結果とスクリーンショットは `var/artex/evidence/` に保存する。診断taskは作らない。
 
